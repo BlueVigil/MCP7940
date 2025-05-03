@@ -5,7 +5,6 @@ Arduino Library for the MCP7940M and MCP7940N Real-Time Clock devices\n\n
 See main library header file for details
 */
 #include "MCP7940.h"
-
 /*! Define the number of days in each month */
 const uint8_t   daysInMonth[] PROGMEM = {31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31};
 static uint16_t date2days(uint16_t y, uint8_t m, uint8_t d) {
@@ -16,7 +15,9 @@ static uint16_t date2days(uint16_t y, uint8_t m, uint8_t d) {
    * @param[in] d Day
    * @return    number of days from a given Y M D value
    */
-  if (y >= 2000) { y -= 2000; }  // of if-then year is greater than 2000
+  if (y >= 2000) {
+    y -= 2000;
+  }  // of if-then year is greater than 2000
   uint16_t days = d;
   for (uint8_t i = 1; i < m; ++i)  // Add number of days for each month
   {
@@ -50,7 +51,9 @@ static uint8_t conv2d(const char* p) {
    * @return    decimal value
    */
   uint8_t v = 0;
-  if ('0' <= *p && *p <= '9') { v = *p - '0'; }  // of if-then character in range
+  if ('0' <= *p && *p <= '9') {
+    v = *p - '0';
+  }  // of if-then character in range
   return 10 * v + *++p - '0';
 }  // of method conv2d
 DateTime::DateTime(uint32_t t) {
@@ -60,16 +63,12 @@ DateTime::DateTime(uint32_t t) {
    constructor so there are multiple definitions. This implementation ignores time zones and DST
    changes. It also ignores leap seconds, see http://en.wikipedia.org/wiki/Leap_second
    @param[in] t seconds since the year 1970 (UNIX timet) */
-  if (t < SECS_1970_TO_2000) {
-    t = 0;  // set to lowest possible date 2000-01-01
-  } else {
-    t -= SECS_1970_TO_2000;  // bring to 2000 timestamp from 1970
-  }
+  t -= SECS_1970_TO_2000;  // bring to 2000 timestamp from 1970
   ss = t % 60;
   t /= 60;
   mm = t % 60;
   t /= 60;
-  hh = t % 24;
+  hh            = t % 24;
   uint16_t days = t / 24;
   uint8_t  leap;
   for (yOff = 0;; ++yOff) {
@@ -98,7 +97,9 @@ DateTime::DateTime(uint16_t year, uint8_t month, uint8_t day, uint8_t hour, uint
    @param[in] hour Hour
    @param[in] min Minute
    @param[in] sec Second */
-  if (year >= 2000) { year -= 2000; }  // of if-then year is greater than 2000 for offset
+  if (year >= 2000) {
+    year -= 2000;
+  }  // of if-then year is greater than 2000 for offset
   yOff = year;
   m    = month;
   d    = day;
@@ -125,14 +126,30 @@ DateTime::DateTime(const char* date, const char* time) {
   @param[in] time Pointer to time string */
   yOff = conv2d(date + 9);
   switch (date[0]) {
-    case 'J': m = (date[1] == 'a') ? 1 : ((date[2] == 'n') ? 6 : 7); break;  // Jan June July
-    case 'F': m = 2; break;                                                  // February
-    case 'A': m = date[2] == 'r' ? 4 : 8; break;                             // April August
-    case 'M': m = date[2] == 'r' ? 3 : 5; break;                             // March May
-    case 'S': m = 9; break;                                                  // September
-    case 'O': m = 10; break;                                                 // October
-    case 'N': m = 11; break;                                                 // November
-    case 'D': m = 12; break;                                                 // December
+    case 'J':
+      m = (date[1] == 'a') ? 1 : ((date[2] == 'n') ? 6 : 7);
+      break;  // Jan June July
+    case 'F':
+      m = 2;
+      break;  // February
+    case 'A':
+      m = date[2] == 'r' ? 4 : 8;
+      break;  // April August
+    case 'M':
+      m = date[2] == 'r' ? 3 : 5;
+      break;  // March May
+    case 'S':
+      m = 9;
+      break;  // September
+    case 'O':
+      m = 10;
+      break;  // October
+    case 'N':
+      m = 11;
+      break;  // November
+    case 'D':
+      m = 12;
+      break;              // December
   }                       // of switch for the month
   d  = conv2d(date + 4);  // Compute the day
   hh = conv2d(time);
@@ -174,7 +191,7 @@ uint32_t DateTime::unixtime(void) const {
   */
   uint16_t days = date2days(yOff, m, d);        // Compute days
   uint32_t t    = time2long(days, hh, mm, ss);  // Compute seconds
-  t += SECS_1970_TO_2000;                       // Add time from 1970 to 2000
+  t += SECS_1970_TO_2000;                       // Add time form 1970 to 2000
   return t;
 }  // of method unixtime()
 long DateTime::secondstime(void) const {
@@ -186,14 +203,6 @@ long DateTime::secondstime(void) const {
   long     t    = time2long(days, hh, mm, ss);
   return t;
 }  // of method secondstime()
-bool DateTime::equals(const DateTime* other) {
-  /*!
-  @brief     added equals method for class DateTime
-  @return    true if date and time are equal else return false
-  */
-  return (this->yOff == other->yOff && this->m == other->m && this->d == other->d &&
-          this->hh == other->hh && this->mm == other->mm && this->ss == other->ss);
-}
 DateTime DateTime::operator+(const TimeSpan& span) {
   /*!
   @brief     overloaded "+" operator for class DateTime
@@ -228,35 +237,20 @@ TimeSpan TimeSpan::operator+(const TimeSpan& right) {
 TimeSpan TimeSpan::operator-(const TimeSpan& right) {
   return TimeSpan(_seconds - right._seconds);
 }  // of overloaded subtract
-bool MCP7940_Class::begin(const uint32_t i2cSpeed) const {
+bool MCP7940_Class::begin(bool initWire, const uint32_t i2cSpeed) const {
   /*!
       @brief     Start I2C device communications
       @details   Starts I2C comms with the device, using a default speed if one is not specified
+      @param[in] initWire defaults to TRUE, allows sharing of the i2c line and initialization elsewhere	  
       @param[in] i2cSpeed defaults to I2C_STANDARD_MODE, otherwise use speed in Herz
       @return    true if successfully started communication, otherwise false
   */
-  return begin(SDA, SCL, i2cSpeed);
-}  // of method begin()
-bool MCP7940_Class::begin(const uint8_t sda, const uint8_t scl, const uint32_t i2cSpeed) const {
-  /*!
-      @brief     Start I2C device communications
-      @details   Starts I2C comms with the device, using default SDA and SCL ports as well as speed
-                 if they are not specified
-      @param[in] sda defaults to PIN_WIRE_SDA, otherwise use pin (ignored if not ESP8266)
-      @param[in] scl defaults to PIN_WIRE_SCL, otherwise use pin (ignored if not ESP8266)
-      @param[in] i2cSpeed defaults to I2C_STANDARD_MODE, otherwise use speed in Herz
-      @return    true if successfully started communication, otherwise false
-  */
-#if defined(ESP8266)
-  Wire.begin(sda, scl);  // Start I2C as master device using the specified SDA and SCL
-#else
-  Wire.begin();  // Start I2C as master device
-#endif
-  (void)sda;                // force compiler to ignore this potentially unused parameter
-  (void)scl;                // force compiler to ignore this potentially unused parameter
-  Wire.setClock(i2cSpeed);  // Set the I2C bus speed
-  Wire.beginTransmission(MCP7940_ADDRESS);  // Address the MCP7940
-  if (Wire.endTransmission() == 0)          // If there a device present
+  if (initWire) {
+	_Wire->begin();                             // Start I2C as master device
+	_Wire->setClock(i2cSpeed);                  // Set the I2C bus speed
+  }
+  _Wire->beginTransmission(MCP7940_ADDRESS);  // Address the MCP7940
+  if (_Wire->endTransmission() == 0)          // If there a device present
   {
     clearRegisterBit(MCP7940_RTCHOUR, MCP7940_12_24);  // Use 24 hour clock
     setRegisterBit(MCP7940_CONTROL, MCP7940_ALMPOL);   // assert alarm low, default high
@@ -265,7 +259,6 @@ bool MCP7940_Class::begin(const uint8_t sda, const uint8_t scl, const uint32_t i
     return false;  // return error if no device found
   }                // of if-then-else device detected
 }  // of method begin()
-
 uint8_t MCP7940_Class::readByte(const uint8_t addr) const {
   /*!
       @brief     Read a single byte from the device address
@@ -437,11 +430,10 @@ void MCP7940_Class::adjust(const DateTime& dt) {
   I2C_write(MCP7940_RTCMIN, int2bcd(dt.minute()));
   I2C_write(MCP7940_RTCHOUR, int2bcd(dt.hour()));
   weekdayWrite(dt.dayOfTheWeek());                        // Update the weekday
-  I2C_write(MCP7940_RTCMTH, int2bcd(dt.month()));         // Month, ignore R/O leapyear bit
   I2C_write(MCP7940_RTCDATE, int2bcd(dt.day()));          // Write the day of month
+  I2C_write(MCP7940_RTCMTH, int2bcd(dt.month()));         // Month, ignore R/O leapyear bit
   I2C_write(MCP7940_RTCYEAR, int2bcd(dt.year() - 2000));  // Write the year
   deviceStart();                                          // Restart the oscillator
-  weekdayWrite(dt.dayOfTheWeek());                        // Silicon errata issue 4
   _SetUnixTime = dt.unixtime();                           // Store time of last change
 }  // of method adjust
 uint8_t MCP7940_Class::weekdayRead() const {
@@ -536,10 +528,18 @@ int8_t MCP7940_Class::calibrate(const float fMeas) const {
   uint32_t fIdeal = getSQWSpeed();         // read the current SQW Speed code
   switch (fIdeal)                          // set variable to real SQW speed
   {
-    case 0: fIdeal = 1; break;
-    case 1: fIdeal = 4096; break;
-    case 2: fIdeal = 8192; break;
-    case 4: fIdeal = 64; break;
+    case 0:
+      fIdeal = 1;
+      break;
+    case 1:
+      fIdeal = 4096;
+      break;
+    case 2:
+      fIdeal = 8192;
+      break;
+    case 4:
+      fIdeal = 64;
+      break;
     case 3:
       fIdeal = 32768;
       trim   = 0;  // Trim is ignored on 32KHz signal
@@ -745,7 +745,9 @@ bool MCP7940_Class::clearAlarm(const uint8_t alarmNumber) const {
       @param[in] alarmNumber Alarm number 0 or 1
       @return False if the alarmNumber is out of range, otherwise true
   */
-  if (alarmNumber > 1) { return false; }  // of if-then a bad alarm number
+  if (alarmNumber > 1) {
+    return false;
+  }  // of if-then a bad alarm number
   clearRegisterBit(alarmNumber ? MCP7940_ALM1WKDAY : MCP7940_ALM0WKDAY,
                    MCP7940_ALM0IF);  // reset register bit
   return true;
@@ -757,7 +759,9 @@ bool MCP7940_Class::setAlarmState(const uint8_t alarmNumber, const bool state) c
       @param[in] state State to the set the alarm to
       @return False if the alarmNumber is out of range, otherwise true
   */
-  if (alarmNumber > 1) { return false; }  // of if-then a bad alarm number
+  if (alarmNumber > 1) {
+    return false;
+  }  // of if-then a bad alarm number
   writeRegisterBit(MCP7940_CONTROL, alarmNumber ? MCP7940_ALM1EN : MCP7940_ALM0EN,
                    state);  // Overwrite register bit
   return true;
@@ -768,7 +772,9 @@ bool MCP7940_Class::getAlarmState(const uint8_t alarmNumber) const {
       @param[in] alarmNumber Alarm number 0 or 1
       @return False if the alarmNumber is out of range or off, otherwise true
   */
-  if (alarmNumber > 1) { return false; }  // of if-then a bad alarm number
+  if (alarmNumber > 1) {
+    return false;
+  }  // of if-then a bad alarm number
   return readRegisterBit(MCP7940_CONTROL,
                          alarmNumber ? MCP7940_ALM1EN : MCP7940_ALM0EN);  // Get state of alarm
 }  // of getAlarmState()
@@ -778,7 +784,9 @@ bool MCP7940_Class::isAlarm(const uint8_t alarmNumber) const {
       @param[in] alarmNumber Alarm number 0 or 1
       @return False if the alarmNumber is out of range or off, otherwise true
   */
-  if (alarmNumber > 1) { return false; }  // of if-then a bad alarm number
+  if (alarmNumber > 1) {
+    return false;
+  }  // of if-then a bad alarm number
   return readRegisterBit(alarmNumber ? MCP7940_ALM1WKDAY : MCP7940_ALM0WKDAY,
                          MCP7940_ALM0IF);  // Get alarm state
 }  // of method isAlarm()
