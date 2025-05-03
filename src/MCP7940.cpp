@@ -237,6 +237,14 @@ TimeSpan TimeSpan::operator+(const TimeSpan& right) {
 TimeSpan TimeSpan::operator-(const TimeSpan& right) {
   return TimeSpan(_seconds - right._seconds);
 }  // of overloaded subtract
+
+
+/***************************************************************************************************
+ **                                                                                               **
+ ** Implementation of MCP7940                                                                     **
+ **                                                                                               **
+ ***************************************************************************************************/
+//void MCP7940_Class::setWire(TwoWire& wirePort) {_mcpWire = &wirePort;}
 bool MCP7940_Class::begin(bool initWire, const uint32_t i2cSpeed) const {
   /*!
       @brief     Start I2C device communications
@@ -246,11 +254,11 @@ bool MCP7940_Class::begin(bool initWire, const uint32_t i2cSpeed) const {
       @return    true if successfully started communication, otherwise false
   */
   if (initWire) {
-	_Wire->begin();                             // Start I2C as master device
-	_Wire->setClock(i2cSpeed);                  // Set the I2C bus speed
+	_mcpWire->begin();                             // Start I2C as master device
+	_mcpWire->setClock(i2cSpeed);                  // Set the I2C bus speed
   }
-  _Wire->beginTransmission(MCP7940_ADDRESS);  // Address the MCP7940
-  if (_Wire->endTransmission() == 0)          // If there a device present
+  _mcpWire->beginTransmission(MCP7940_ADDRESS);  // Address the MCP7940
+  if (_mcpWire->endTransmission() == 0)          // If there a device present
   {
     clearRegisterBit(MCP7940_RTCHOUR, MCP7940_12_24);  // Use 24 hour clock
     setRegisterBit(MCP7940_CONTROL, MCP7940_ALMPOL);   // assert alarm low, default high
