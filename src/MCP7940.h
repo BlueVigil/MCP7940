@@ -256,7 +256,7 @@ class MCP7940_Class {
  public:
   MCP7940_Class(TwoWire &wirePort = Wire): _mcpWire(&wirePort) {}; // Default is Wire so should be backwards compatible
   ~MCP7940_Class(){};  ///< Unused Class destructor
-  bool     begin(bool initWire = false, const uint32_t i2cSpeed = 100000) const;
+  bool     begin(bool initWire = true, const uint32_t i2cSpeed = 100000) const;
 //  bool     begin(const uint8_t sda = SDA, const uint8_t scl = SCL,
 //                 const uint32_t i2cSpeed = I2C_STANDARD_MODE) const;
   void     setWire(TwoWire &wirePort) {_mcpWire = &wirePort;};
