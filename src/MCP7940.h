@@ -15,25 +15,7 @@ se is made of portions of Adafruit's RTClib Version 1.2.0 at https://github.com/
 which is a fork of the original RTClib from Jeelabs. The re-used code encompasses only the classes
 for time and date.\n
 
-@section doxygen configuration
-This library is built with the standard "Doxyfile", which is located at
-https://github.com/Zanduino/Common/blob/main/Doxygen. As described on that page, there are only 5
-environment variables used, and these are set in the project's actions file, located at
-https://github.com/Zanduino/MCP7940/blob/master/.github/workflows/ci-doxygen.yml
-Edit this file and set the 5 variables: PRETTYNAME, PROJECT_NAME, PROJECT_NUMBER, PROJECT_BRIEF and
-PROJECT_LOGO so that these values are used in the doxygen documentation.
-The local copy of the doxyfile should be in the project's root directory in order to do local
-doxygen testing, but the file is ignored on upload to GitHub.
-
-@section clang-format
-Part of the GitHub actions for CI is running every source file through "clang-format" to ensure
-that coding formatting is done the same for all files. The configuration file ".clang-format" is
-located at https://github.com/Zanduino/Common/tree/main/clang-format and this is used for CI tests
-when pushing to GitHub. The local file, if present in the root directory, is ignored when
-committing and uploading.
-
 @section license GNU General Public License v3.0
-
 This program is free software: you can redistribute it and/or modify it under the terms of the GNU
 General Public License as published by the Free Software Foundation, either version 3 of the
 License, or (at your option) any later version. This program is distributed in the hope that it will
@@ -44,18 +26,12 @@ received a copy of the GNU General Public License along with this program.  If n
 
  @section author Author
 
-Written by Arnd <Arnd@Zanduino.Com> at https://www.github.com/SV-Zanshin
+ Written by Arnd\@SV-Zanshin
 
  @section versions Changelog
 
 Version| Date       | Developer           | Comments
 ------ | ---------- | ------------------- | --------
-1.2.2  | 2025-01-26 | Hady-sarhan         | Issue #66 - Corrected setting Wire.begin
-1.2.2  | 2023-06-12 | Mark-Wills          | Issue #65 - Corrected return value
-1.2.2  | 2021-12-16 | BrotherV            | Issue #63 - Add ESP8266 support for defining SDA and SCL pins.
-1.2.1  | 2021-05-23 | SV-Zanshin          | Issue #60 - Correct handling of dates < 2000-01-01
-1.2.1  | 2021-01-06 | SV-Zanshin          | Issue #58 - Corrected return reference values in readRAM and readEUI and added writeEUI
-1.2.1  | 2021-01-05 | masterx1981         | Issue #58 - Add support for MCP79401 and MCP79402 read EUI data
 1.1.9  | 2020-11-26 | SV-Zanshin          | Issue #54 - Optimize c++ code / resilience. Uniform Initialization. Consolidated I2C calls.
 1.1.8  | 2020-11-15 | SV-Zanshin          | Issue #50 - Reformat with "clang-format"
 1.1.8  | 2020-11-14 | SV-Zanshin          | Issue #49 - corrections for Battery Backup mode
@@ -97,103 +73,102 @@ Version| Date       | Developer           | Comments
 1.0.1b | 2017-07-19 | SV-Zanshin          | Added methods
 1.0.0b | 2017-07-17 | SV-Zanshin          | Initial coding
 */
-
 // clang-format on
 
 #include "Arduino.h"  // Arduino data type definitions
-#include "Wire.h"     // Standard I2C "Wire" library
+	#include <i2c_driver.h>
+	#include <i2c_driver_wire.h>
+//#include "Wire.h"     // Standard I2C "Wire" library
 #ifndef MCP7940_h
-  /** @brief  Guard code definition */
-  #define MCP7940_h  // Define the name inside guard code
+/** @brief  Guard code definition */
+#define MCP7940_h  // Define the name inside guard code
 /***************************************************************************************************
 ** Declare classes used in within the class                                                       **
 ***************************************************************************************************/
 class TimeSpan;
-  /***************************************************************************************************
-  ** Declare constants used in the class **
-  ***************************************************************************************************/
-  #ifndef I2C_MODES  // I2C related constants
-    /** @brief Guard code definition */
-    #define I2C_MODES
+/***************************************************************************************************
+** Declare constants used in the class                                                            **
+***************************************************************************************************/
+#ifndef I2C_MODES  // I2C related constants
+/** @brief Guard code definition */
+#define I2C_MODES
 const uint32_t I2C_STANDARD_MODE{100000};  ///< Default normal I2C 100KHz speed
 const uint32_t I2C_FAST_MODE{400000};      ///< Fast mode
-  #endif
-  #if !defined(BUFFER_LENGTH)  // The ESP32 Wire library doesn't currently define BUFFER_LENGTH
-    /** @brief If the "Wire.h" library doesn't define the buffer, do so here */
-    #define BUFFER_LENGTH 32
-  #endif
+#endif
+#if !defined(BUFFER_LENGTH)  // The ESP32 Wire library doesn't currently define BUFFER_LENGTH
+/** @brief If the "Wire.h" library doesn't define the buffer, do so here */
+#define BUFFER_LENGTH 32
+#endif
 
-const uint8_t  MCP7940_ADDRESS{0x6F};          ///< Fixed I2C address, fixed
-const uint8_t  MCP7940_EUI_ADDRESS{0x57};      ///< Fixed I2C address for accessing protected ROM
-const uint8_t  MCP7940_RTCSEC{0x00};           ///< Timekeeping, RTCSEC Register address
-const uint8_t  MCP7940_RTCMIN{0x01};           ///< Timekeeping, RTCMIN Register address
-const uint8_t  MCP7940_RTCHOUR{0x02};          ///< Timekeeping, RTCHOUR Register address
-const uint8_t  MCP7940_RTCWKDAY{0x03};         ///< Timekeeping, RTCWKDAY Register address
-const uint8_t  MCP7940_RTCDATE{0x04};          ///< Timekeeping, RTCDATE Register address
-const uint8_t  MCP7940_RTCMTH{0x05};           ///< Timekeeping, RTCMTH Register address
-const uint8_t  MCP7940_RTCYEAR{0x06};          ///< Timekeeping, RTCYEAR Register address
-const uint8_t  MCP7940_CONTROL{0x07};          ///< Timekeeping, RTCCONTROL Register address
-const uint8_t  MCP7940_OSCTRIM{0x08};          ///< Timekeeping, RTCOSCTRIM Register address
-const uint8_t  MCP7940_EEUNLOCK{0x09};         ///< Virtual unlock register on MCP7940x series
-const uint8_t  MCP7940_ALM0SEC{0x0A};          ///< Alarm 0, ALM0SEC Register address
-const uint8_t  MCP7940_ALM0MIN{0x0B};          ///< Alarm 0, ALM0MIN Register address
-const uint8_t  MCP7940_ALM0HOUR{0x0C};         ///< Alarm 0, ALM0HOUR Register address
-const uint8_t  MCP7940_ALM0WKDAY{0x0D};        ///< Alarm 0, ALM0WKDAY Register address
-const uint8_t  MCP7940_ALM0DATE{0x0E};         ///< Alarm 0, ALM0DATE Register address
-const uint8_t  MCP7940_ALM0MTH{0x0F};          ///< Alarm 0, ALM0MTH Register address
-const uint8_t  MCP7940_ALM1SEC{0x11};          ///< Alarm 1, ALM1SEC Register address
-const uint8_t  MCP7940_ALM1MIN{0x12};          ///< Alarm 1, ALM1MIN Register address
-const uint8_t  MCP7940_ALM1HOUR{0x13};         ///< Alarm 1, ALM1HOUR Register address
-const uint8_t  MCP7940_ALM1WKDAY{0x14};        ///< Alarm 1, ALM1WKDAY Register address
-const uint8_t  MCP7940_ALM1DATE{0x15};         ///< Alarm 1, ALM1DATE Register address
-const uint8_t  MCP7940_ALM1MTH{0x16};          ///< Alarm 1, ALM1MONTH Register address
-const uint8_t  MCP7940_PWRDNMIN{0x18};         ///< Power-Fail, PWRDNMIN Register address
-const uint8_t  MCP7940_PWRDNHOUR{0x19};        ///< Power-Fail, PWRDNHOUR Register address
-const uint8_t  MCP7940_PWRDNDATE{0x1A};        ///< Power-Fail, PWDNDATE Register address
-const uint8_t  MCP7940_PWRDNMTH{0x1B};         ///< Power-Fail, PWRDNMTH Register address
-const uint8_t  MCP7940_PWRUPMIN{0x1C};         ///< Power-Fail, PWRUPMIN Register address
-const uint8_t  MCP7940_PWRUPHOUR{0x1D};        ///< Power-Fail, PWRUPHOUR Register address
-const uint8_t  MCP7940_PWRUPDATE{0x1E};        ///< Power-Fail, PWRUPDATE Register address
-const uint8_t  MCP7940_PWRUPMTH{0x1F};         ///< Power-Fail, PWRUPMTH Register address
-const uint8_t  MCP7940_RAM_ADDRESS{0x20};      ///< NVRAM - Start address for SRAM
-const uint8_t  MCP7940_EUI_RAM_ADDRESS{0xF0};  ///< EUI - Start address for protected EEPROM
-const uint8_t  MCP7940_ST{7};                  ///< MCP7940 register bits. RTCSEC reg
-const uint8_t  MCP7940_12_24{6};               ///< RTCHOUR, PWRDNHOUR & PWRUPHOUR
-const uint8_t  MCP7940_AM_PM{5};               ///< RTCHOUR, PWRDNHOUR & PWRUPHOUR
-const uint8_t  MCP7940_OSCRUN{5};              ///< RTCWKDAY register
-const uint8_t  MCP7940_PWRFAIL{4};             ///< RTCWKDAY register
-const uint8_t  MCP7940_VBATEN{3};              ///< RTCWKDAY register
-const uint8_t  MCP7940_LPYR{5};                ///< RTCMTH register
-const uint8_t  MCP7940_OUT{7};                 ///< CONTROL register
-const uint8_t  MCP7940_SQWEN{6};               ///< CONTROL register
-const uint8_t  MCP7940_ALM1EN{5};              ///< CONTROL register
-const uint8_t  MCP7940_ALM0EN{4};              ///< CONTROL register
-const uint8_t  MCP7940_EXTOSC{3};              ///< CONTROL register
-const uint8_t  MCP7940_CRSTRIM{2};             ///< CONTROL register
-const uint8_t  MCP7940_SQWFS1{1};              ///< CONTROL register
-const uint8_t  MCP7940_SQWFS0{0};              ///< CONTROL register
-const uint8_t  MCP7940_SIGN{7};                ///< OSCTRIM register
-const uint8_t  MCP7940_ALMPOL{7};              ///< ALM0WKDAY register
-const uint8_t  MCP7940_ALM0IF{3};              ///< ALM0WKDAY register
-const uint8_t  MCP7940_ALM1IF{3};              ///< ALM1WKDAY register
-const uint32_t SECS_1970_TO_2000{946684800};   ///< Seconds between year 1970 and 2000
+//const uint8_t  MCP7940_ADDRESS{0x6F};         ///< Device address, fixed value
+const uint8_t  MCP7940_ADDRESS{0x6F};         ///< Device address, fixed value
+const uint8_t  MCP7940_RTCSEC{0x00};          ///< Timekeeping, RTCSEC Register address
+const uint8_t  MCP7940_RTCMIN{0x01};          ///< Timekeeping, RTCMIN Register address
+const uint8_t  MCP7940_RTCHOUR{0x02};         ///< Timekeeping, RTCHOUR Register address
+const uint8_t  MCP7940_RTCWKDAY{0x03};        ///< Timekeeping, RTCWKDAY Register address
+const uint8_t  MCP7940_RTCDATE{0x04};         ///< Timekeeping, RTCDATE Register address
+const uint8_t  MCP7940_RTCMTH{0x05};          ///< Timekeeping, RTCMTH Register address
+const uint8_t  MCP7940_RTCYEAR{0x06};         ///< Timekeeping, RTCYEAR Register address
+const uint8_t  MCP7940_CONTROL{0x07};         ///< Timekeeping, RTCCONTROL Register address
+const uint8_t  MCP7940_OSCTRIM{0x08};         ///< Timekeeping, RTCOSCTRIM Register address
+const uint8_t  MCP7940_ALM0SEC{0x0A};         ///< Alarm 0, ALM0SEC Register address
+const uint8_t  MCP7940_ALM0MIN{0x0B};         ///< Alarm 0, ALM0MIN Register address
+const uint8_t  MCP7940_ALM0HOUR{0x0C};        ///< Alarm 0, ALM0HOUR Register address
+const uint8_t  MCP7940_ALM0WKDAY{0x0D};       ///< Alarm 0, ALM0WKDAY Register address
+const uint8_t  MCP7940_ALM0DATE{0x0E};        ///< Alarm 0, ALM0DATE Register address
+const uint8_t  MCP7940_ALM0MTH{0x0F};         ///< Alarm 0, ALM0MTH Register address
+const uint8_t  MCP7940_ALM1SEC{0x11};         ///< Alarm 1, ALM1SEC Register address
+const uint8_t  MCP7940_ALM1MIN{0x12};         ///< Alarm 1, ALM1MIN Register address
+const uint8_t  MCP7940_ALM1HOUR{0x13};        ///< Alarm 1, ALM1HOUR Register address
+const uint8_t  MCP7940_ALM1WKDAY{0x14};       ///< Alarm 1, ALM1WKDAY Register address
+const uint8_t  MCP7940_ALM1DATE{0x15};        ///< Alarm 1, ALM1DATE Register address
+const uint8_t  MCP7940_ALM1MTH{0x16};         ///< Alarm 1, ALM1MONTH Register address
+const uint8_t  MCP7940_PWRDNMIN{0x18};        ///< Power-Fail, PWRDNMIN Register address
+const uint8_t  MCP7940_PWRDNHOUR{0x19};       ///< Power-Fail, PWRDNHOUR Register address
+const uint8_t  MCP7940_PWRDNDATE{0x1A};       ///< Power-Fail, PWDNDATE Register address
+const uint8_t  MCP7940_PWRDNMTH{0x1B};        ///< Power-Fail, PWRDNMTH Register address
+const uint8_t  MCP7940_PWRUPMIN{0x1C};        ///< Power-Fail, PWRUPMIN Register address
+const uint8_t  MCP7940_PWRUPHOUR{0x1D};       ///< Power-Fail, PWRUPHOUR Register address
+const uint8_t  MCP7940_PWRUPDATE{0x1E};       ///< Power-Fail, PWRUPDATE Register address
+const uint8_t  MCP7940_PWRUPMTH{0x1F};        ///< Power-Fail, PWRUPMTH Register address
+const uint8_t  MCP7940_RAM_ADDRESS{0x20};     ///< NVRAM - Start address for SRAM
+const uint8_t  MCP7940_ST{7};                 ///< MCP7940 register bits. RTCSEC reg
+const uint8_t  MCP7940_12_24{6};              ///< RTCHOUR, PWRDNHOUR & PWRUPHOUR
+const uint8_t  MCP7940_AM_PM{5};              ///< RTCHOUR, PWRDNHOUR & PWRUPHOUR
+const uint8_t  MCP7940_OSCRUN{5};             ///< RTCWKDAY register
+const uint8_t  MCP7940_PWRFAIL{4};            ///< RTCWKDAY register
+const uint8_t  MCP7940_VBATEN{3};             ///< RTCWKDAY register
+const uint8_t  MCP7940_LPYR{5};               ///< RTCMTH register
+const uint8_t  MCP7940_OUT{7};                ///< CONTROL register
+const uint8_t  MCP7940_SQWEN{6};              ///< CONTROL register
+const uint8_t  MCP7940_ALM1EN{5};             ///< CONTROL register
+const uint8_t  MCP7940_ALM0EN{4};             ///< CONTROL register
+const uint8_t  MCP7940_EXTOSC{3};             ///< CONTROL register
+const uint8_t  MCP7940_CRSTRIM{2};            ///< CONTROL register
+const uint8_t  MCP7940_SQWFS1{1};             ///< CONTROL register
+const uint8_t  MCP7940_SQWFS0{0};             ///< CONTROL register
+const uint8_t  MCP7940_SIGN{7};               ///< OSCTRIM register
+const uint8_t  MCP7940_ALMPOL{7};             ///< ALM0WKDAY register
+const uint8_t  MCP7940_ALM0IF{3};             ///< ALM0WKDAY register
+const uint8_t  MCP7940_ALM1IF{3};             ///< ALM1WKDAY register
+const uint32_t SECS_1970_TO_2000{946684800};  ///< Seconds between year 1970 and 2000
 
 class DateTime {
   /*!
     @class   DateTime
     @brief   Simple general-purpose date/time class
     @details Copied from RTClib. For further information on this implementation see
-             https://github.com/Zanduino/MCP7940/wiki/DateTimeClass
+             https://github.com/SV-Zanshin/MCP7940/wiki/DateTimeClass
   */
  public:
-  DateTime(uint32_t t = SECS_1970_TO_2000);
+  DateTime(uint32_t t = 0);
   DateTime(uint16_t year, uint8_t month, uint8_t day, uint8_t hour = 0, uint8_t min = 0,
            uint8_t sec = 0);
   DateTime(const DateTime& copy);
   DateTime(const char* date, const char* time);
   DateTime(const __FlashStringHelper* date, const __FlashStringHelper* time);
   uint16_t year() const { /*! return the current year */
-    return 2000U + yOff;
+    return 2000 + yOff;
   }
   uint8_t month() const { /*! return the current month */
     return m;
@@ -213,7 +188,6 @@ class DateTime {
   uint8_t  dayOfTheWeek() const;            /*! return the current day of the week starting at 0 */
   long     secondstime() const;             /*! return the current seconds in the year */
   uint32_t unixtime(void) const;            /*! return the current Unixtime */
-  bool     equals(const DateTime* other);   /*! return true if two datetimes hold the same value */
   DateTime operator+(const TimeSpan& span); /*! Overloaded "+" operator to add two timespans */
   DateTime operator-(const TimeSpan& span); /*! Overloaded "+" operator to add two timespans */
   TimeSpan operator-(
@@ -231,7 +205,7 @@ class TimeSpan {
    @class   TimeSpan
    @brief   Timespan class which can represent changes in time with seconds accuracy
    @details Copied from RTClib. For further information see
-            https://github.com/Zanduino/MCP7940/wiki/TimeSpanClass for additional details
+            https://github.com/SV-Zanshin/MCP7940/wiki/TimeSpanClass for additional details
   */
  public:
   TimeSpan(int32_t seconds = 0);                                         ///< Default constructor
@@ -254,11 +228,9 @@ class MCP7940_Class {
    @brief Main class definition with forward declarations
   */
  public:
-  MCP7940_Class(){};   ///< Unused Class constructor
+  MCP7940_Class(TwoWire &wirePort = Wire) : _mcpWire(&wirePort) {};  ///< Class constructor
   ~MCP7940_Class(){};  ///< Unused Class destructor
-  bool     begin(const uint32_t i2cSpeed) const;
-  bool     begin(const uint8_t sda = SDA, const uint8_t scl = SCL,
-                 const uint32_t i2cSpeed = I2C_STANDARD_MODE) const;
+  bool     begin(bool initWire = true, const uint32_t i2cSpeed = I2C_STANDARD_MODE) const;
   bool     deviceStatus() const;
   bool     deviceStart() const;
   bool     deviceStop() const;
@@ -302,10 +274,9 @@ class MCP7940_Class {
   ** ============================================================================================ **
   ** readRAM   read any number of bytes from the MCP7940 SRAM area                                **
   ** writRAM   write any number of bytes to the MCP7940 SRAM area                                 **
-  ** readEUI   read any number of bytes from the special protected SRAM area for 79400/401/402    **
   *************************************************************************************************/
   template <typename T>
-  uint8_t readRAM(const uint8_t& addr, T& value) const {
+  uint8_t& readRAM(const uint8_t& addr, T& value) const {
     /*!
      @brief     Template for readRAM()
      @details   As a template it can support compile-time data type definitions
@@ -313,10 +284,11 @@ class MCP7940_Class {
      @param[in] value    Data Type "T" to read
      @return    Pointer to return data structure
     */
-    return I2C_read((addr % 64) + MCP7940_RAM_ADDRESS, value);
+    uint8_t i = I2C_read((addr % 64) + MCP7940_RAM_ADDRESS, value);
+    return (i);
   }  // of method readRAM()
   template <typename T>
-  uint8_t writeRAM(const uint8_t& addr, const T& value) const {
+  bool writeRAM(const uint8_t& addr, const T& value) const {
     /*!
      @brief     Template for writeRAM()
      @details   As a template it can support compile-time data type definitions
@@ -327,57 +299,8 @@ class MCP7940_Class {
     uint8_t i = I2C_write((addr % 64) + MCP7940_RAM_ADDRESS, value);
     return i;
   }  // of method writeRAM()
-  template <typename T>
-  uint8_t readEUI(const uint8_t& addr, T& value) const {
-    /*!
-     @brief     Template for readEUI()
-     @details   As a template it can support compile-time data type definitions. This is a special
-                call as it access a different I2C address and a different memory block
-     @param[in] addr     Memory address
-     @param[in] value    Data Type "T" to read
-     @return             Pointer to return data structure
-    */
-    uint8_t i{0};                                        // return number of bytes read
-    Wire.beginTransmission(MCP7940_EUI_ADDRESS);         // Address the special I2C address
-    Wire.write((addr % 8) + MCP7940_EUI_RAM_ADDRESS);    // Send register address to read from
-    if (Wire.endTransmission() == 0) {                   // Close transmission and check error code
-      Wire.requestFrom(MCP7940_EUI_ADDRESS, sizeof(T));  // Request a block of data, max 61 bits
-      uint8_t* bytePtr = (uint8_t*)&value;               // Declare pointer to start of structure
-      for (i = 0; i < sizeof(T); i++) {                  // Loop for each byte to be read
-        *bytePtr++ = Wire.read();                        // Read a byte
-      }                                                  // of for-next each byte
-    }                                                    // if-then success
-    return i;                                            // return number of bytes read
-  }                                                      // of method readEUI()
-  template <typename T>
-  uint8_t writeEUI(const uint8_t& addr, T& value) const {
-    /*!
-     @brief     Template for writeEUI()
-     @details   As a template it can support compile-time data type definitions. This is a special
-                call as it access a different I2C address and a different memory block and also has
-                to unlock the area prior to writing
-     @param[in] addr     Memory address
-     @param[in] value    Data Type "T" to read
-     @return             Pointer to  data structure to write
-    */
-    uint8_t i{0};                                      // return number of bytes read
-    Wire.beginTransmission(MCP7940_EUI_ADDRESS);       // Address the special I2C address
-    Wire.write(MCP7940_EEUNLOCK);                      // Send special register address to write to
-    Wire.write(0x55);                                  // Special write value to start unlock
-    i = Wire.endTransmission();                        // close transmission of first byte
-    Wire.beginTransmission(MCP7940_EUI_ADDRESS);       // Address the special I2C address
-    Wire.write(MCP7940_EEUNLOCK);                      // Send special register address to write to
-    Wire.write(0x55);                                  // Special write value to complete unlock
-    i = Wire.endTransmission();                        // close transmission of second byte
-    Wire.beginTransmission(MCP7940_EUI_ADDRESS);       // Address the special I2C address
-    Wire.write((addr % 8) + MCP7940_EUI_RAM_ADDRESS);  // Send register address to read from
-    Wire.write((uint8_t*)&value, sizeof(T));           // write the data
-    i = Wire.endTransmission();                        // close transmission of actual write
-    if (i == 0) i = sizeof(T);                         // return number of bytes on success
-    return i;                                          // return number of bytes read
-  }                                                    // of method writeEUI()
-
  private:
+  TwoWire *_mcpWire = &Wire;  ///< Pointer to I2C bus instance
   uint32_t _SetUnixTime{0};  ///< UNIX time when clock last set
   /*************************************************************************************************
   ** Template functions definitions are done in the header file                                   **
@@ -398,14 +321,14 @@ class MCP7940_Class {
     @param[in] value   Data Type "T" to read
     @return    number of bytes read
    */
-    uint8_t i{0};                                    // return number of bytes read
-    Wire.beginTransmission(MCP7940_ADDRESS);         // Address the I2C device
-    Wire.write(address);                             // Send register address to read from
-    if (Wire.endTransmission() == 0) {               // Close transmission and check error code
-      Wire.requestFrom(MCP7940_ADDRESS, sizeof(T));  // Request a block of data
-      uint8_t* bytePtr = (uint8_t*)&value;           // Declare pointer to start of structure
-      for (i = 0; i < sizeof(T); i++) {              // Loop for each byte to be read
-        *bytePtr++ = Wire.read();                    // Read a byte
+    uint8_t i{0};                                            // return number of bytes read
+    _mcpWire->beginTransmission(MCP7940_ADDRESS);           // Address the I2C device
+    _mcpWire->write(address);                               // Send register address to read from
+    if (_mcpWire->endTransmission() == 0) {                 // Close transmission and check error code
+      _mcpWire->requestFrom(MCP7940_ADDRESS, sizeof(T));    // Request a block of data
+      uint8_t* bytePtr = (uint8_t*)&value;                  // Declare pointer to start of structure
+      for (i = 0; i < sizeof(T); i++) {                     // Loop for each byte to be read
+        *bytePtr++ = _mcpWire->read();                      // Read a byte
       }                                              // of for-next each byte
     }                                                // if-then success
     return i;                                        // return number of bytes read
@@ -421,10 +344,10 @@ class MCP7940_Class {
       @param[in] value   Data Type "T" to write
       @return    number of bytes written
      */
-    Wire.beginTransmission(MCP7940_ADDRESS);   // Address the I2C device
-    Wire.write(address);                       // Send register address to read from
-    Wire.write((uint8_t*)&value, sizeof(T));   // write the data
-    uint8_t i = Wire.endTransmission();        // close transmission and save status
+    _mcpWire->beginTransmission(MCP7940_ADDRESS);   // Address the I2C device
+    _mcpWire->write(address);                       // Send register address to read from
+    _mcpWire->write((uint8_t*)&value, sizeof(T));   // write the data
+    uint8_t i = _mcpWire->endTransmission();        // close transmission and save status
     if (i == 0) i = sizeof(T);                 // return number of bytes on success
     return i;                                  // return the number of bytes written
   }                                            // end of template method "I2C_write()"
