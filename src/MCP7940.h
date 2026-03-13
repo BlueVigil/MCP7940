@@ -76,9 +76,7 @@ Version| Date       | Developer           | Comments
 // clang-format on
 
 #include "Arduino.h"  // Arduino data type definitions
-	#include <i2c_driver.h>
-	#include <i2c_driver_wire.h>
-//#include "Wire.h"     // Standard I2C "Wire" library
+#include "Wire.h"     // Standard I2C "Wire" library
 #ifndef MCP7940_h
 /** @brief  Guard code definition */
 #define MCP7940_h  // Define the name inside guard code
@@ -100,7 +98,6 @@ const uint32_t I2C_FAST_MODE{400000};      ///< Fast mode
 #define BUFFER_LENGTH 32
 #endif
 
-//const uint8_t  MCP7940_ADDRESS{0x6F};         ///< Device address, fixed value
 const uint8_t  MCP7940_ADDRESS{0x6F};         ///< Device address, fixed value
 const uint8_t  MCP7940_RTCSEC{0x00};          ///< Timekeeping, RTCSEC Register address
 const uint8_t  MCP7940_RTCMIN{0x01};          ///< Timekeeping, RTCMIN Register address
@@ -230,7 +227,7 @@ class MCP7940_Class {
  public:
   MCP7940_Class(TwoWire &wirePort = Wire) : _mcpWire(&wirePort) {};  ///< Class constructor
   ~MCP7940_Class(){};  ///< Unused Class destructor
-  bool     begin(bool initWire = true, const uint32_t i2cSpeed = I2C_STANDARD_MODE) const;
+  bool     begin(const uint32_t i2cSpeed = I2C_STANDARD_MODE) const;
   bool     deviceStatus() const;
   bool     deviceStart() const;
   bool     deviceStop() const;
@@ -299,6 +296,7 @@ class MCP7940_Class {
     uint8_t i = I2C_write((addr % 64) + MCP7940_RAM_ADDRESS, value);
     return i;
   }  // of method writeRAM()
+  bool getOscRun() const;  ///< Return true if oscillator is actually running (OSCRUN bit)
  private:
   TwoWire *_mcpWire = &Wire;  ///< Pointer to I2C bus instance
   uint32_t _SetUnixTime{0};  ///< UNIX time when clock last set

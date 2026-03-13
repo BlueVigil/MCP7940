@@ -237,18 +237,15 @@ TimeSpan TimeSpan::operator+(const TimeSpan& right) {
 TimeSpan TimeSpan::operator-(const TimeSpan& right) {
   return TimeSpan(_seconds - right._seconds);
 }  // of overloaded subtract
-bool MCP7940_Class::begin(bool initWire, const uint32_t i2cSpeed) const {
+bool MCP7940_Class::begin(const uint32_t i2cSpeed) const {
   /*!
       @brief     Start I2C device communications
       @details   Starts I2C comms with the device, using a default speed if one is not specified
-      @param[in] initWire defaults to TRUE, allows sharing of the i2c line and initialization elsewhere	  
       @param[in] i2cSpeed defaults to I2C_STANDARD_MODE, otherwise use speed in Herz
       @return    true if successfully started communication, otherwise false
   */
-  if (initWire) {
-	_mcpWire->begin();                             // Start I2C as master device
-	_mcpWire->setClock(i2cSpeed);                  // Set the I2C bus speed
-  }
+  _mcpWire->begin();                             // Start I2C as master device
+  _mcpWire->setClock(i2cSpeed);                  // Set the I2C bus speed
   _mcpWire->beginTransmission(MCP7940_ADDRESS);  // Address the MCP7940
   if (_mcpWire->endTransmission() == 0)          // If there a device present
   {
@@ -259,6 +256,9 @@ bool MCP7940_Class::begin(bool initWire, const uint32_t i2cSpeed) const {
     return false;  // return error if no device found
   }                // of if-then-else device detected
 }  // of method begin()
+bool MCP7940_Class::getOscRun() const {
+  return (readByte(MCP7940_RTCWKDAY) >> MCP7940_OSCRUN) & 1;
+}  // of method getOscRun()
 uint8_t MCP7940_Class::readByte(const uint8_t addr) const {
   /*!
       @brief     Read a single byte from the device address
